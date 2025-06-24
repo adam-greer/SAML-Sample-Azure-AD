@@ -68,6 +68,7 @@ try {
       displayName: profile['http://schemas.microsoft.com/identity/claims/displayname'],
       firstName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'],
       lastName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'],
+      title: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/title'],
     });
   }));
   samlEnabled = true;
@@ -98,7 +99,11 @@ app.get('/login/local', (req, res) => {
 
 app.get('/profile', (req, res) => {
   if (!req.isAuthenticated()) return res.redirect('/login');
-  res.render('profile', { title: 'Profile', user: req.user });
+
+  // Use userProfile from session if you saved it there
+  const userProfile = req.session.userProfile || {};
+  console.log('Rengdering profile with user:', userProfile); 
+  res.render('profile', { title: 'Profile', user: userProfile });
 });
 
 
@@ -117,16 +122,36 @@ if (samlEnabled) {
   }));
 
   app.post('/login/callback',
-    passport.authenticate('saml', { failureRedirect: '/login' }),
-    (req, res) => res.redirect('/profile')
-  );
+  passport.authenticate('saml', { failureRedirect: '/login' }),
+  (req, res) => {
+    const profile = req.user;
+    console.log('SAML profile:', profile);
+
+    // Use direct keys from the simplified user object (as set in SamlStrategy)
+    const email = profile.email || '';
+    const firstName = profile.firstName || '';
+    const lastName = profile.lastName || '';
+    const title = profile.title || ''; // only if you added title in SamlStrategy, otherwise empty
+    const displayName = profile.displayName || ''; 
+
+    const userProfile = { email, firstName, lastName, title, displayName };
+
+    console.log('Saving to session:', userProfile);
+    req.session.userProfile = userProfile;
+
+    res.redirect('/profile');
+  }
+);
+
 } else {
   app.get('/login/saml', (req, res) => res.status(503).send('SAML login not configured'));
   app.post('/login/callback', (req, res) => res.status(503).send('SAML login not configured'));
 }
 
+
+// KEEPING as backup until profile page works
 // Protected profile route
-app.get('/profile', (req, res) => {
+/*app.get('/profile', (req, res) => {
   if (!req.isAuthenticated()) return res.redirect('/login');
   res.send(`
     <h1>Profile</h1>
@@ -134,6 +159,9 @@ app.get('/profile', (req, res) => {
     <p><a href="/logout">Logout</a></p>
   `);
 });
+*/
+
+
 
 // Logout route
 app.get('/logout', (req, res) => {

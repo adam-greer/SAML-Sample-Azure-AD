@@ -3,6 +3,24 @@ extends layout
 block content
   .container
     h1 Profile
-    p Welcome, #{user.displayName || user.username || 'User'}!
+    p Hey, #{user.firstName || 'User'}!
+
+    p
+      strong Email:
+      |  #{user.email || 'N/A'}
+    p
+      strong First Name:
+      |  #{user.firstName || 'N/A'}
+    p
+      strong Last Name:
+      |  #{user.lastName || 'N/A'}
+    p
+      strong Title:
+      |  #{user.title || 'N/A'}
+    
+    p
+      strong Display Name:
+      |  #{user.displayName || 'N/A'}
+
     a(href="/logout") Logout
 
