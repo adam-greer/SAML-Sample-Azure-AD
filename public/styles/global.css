@@ -1,0 +1,80 @@
+/* Global body styles */
+body {
+  background: #1e1e2f;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Container for centered content */
+.container {
+  background: #2e2e42;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Input fields and buttons */
+input, button {
+  margin: 10px 0;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+input {
+  background: #44475a;
+  color: #f8f8f2;
+}
+
+input::placeholder {
+  color: #bfbfbf;
+}
+
+/* Button styles */
+button {
+  background: #00bfff;
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background: #0099cc;
+}
+
+/* Link styling */
+a {
+  color: #00bfff;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-block;
+  margin: 10px 0;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: #66d9ff;
+}
+
+/* Login options container for spacing links */
+.login-options a {
+  display: block;
+  margin: 15px 0;
+  font-size: 1.2rem;
+}
+

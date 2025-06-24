@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  .container
+    h1 Login
+    if samlEnabled
+      a(href="/login/saml") 🔐 Login with SAML (Azure AD)
+    a(href="/login/local") 👤 Login with Username/Password
+

@@ -12,6 +12,13 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 
+//setup views and layout
+app.set('view engine', 'jade');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+
 // Session setup (adjust secret in production!)
 app.use(session({
   secret: process.env.MY_SESSION_SECRET || 'defaultsecret',
@@ -77,26 +84,24 @@ passport.deserializeUser((user, done) => done(null, user));
 
 // Unified login page
 app.get('/login', (req, res) => {
-  res.send(`
-    <h1>Login</h1>
-    <ul>
-      ${samlEnabled ? '<li><a href="/login/saml">Login with SAML (Azure AD)</a></li>' : ''}
-      <li><a href="/login/local">Login with username/password</a></li>
-    </ul>
-  `);
+  res.render('login', { title: 'Login', samlEnabled });
 });
 
+
 // Local login form
+
 app.get('/login/local', (req, res) => {
-  res.send(`
-    <h1>Local Login</h1>
-    <form method="POST" action="/login/local">
-      <input name="username" placeholder="Username" required /><br/>
-      <input name="password" type="password" placeholder="Password" required /><br/>
-      <button type="submit">Login</button>
-    </form>
-  `);
+  res.render('login_local', { title: 'Local Login' });
 });
+
+//profile
+
+app.get('/profile', (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect('/login');
+  res.render('profile', { title: 'Profile', user: req.user });
+});
+
+
 
 // Local login handler
 app.post('/login/local', passport.authenticate('local', {

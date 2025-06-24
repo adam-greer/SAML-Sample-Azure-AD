@@ -1,0 +1,8 @@
+extends layout
+
+block content
+  .container
+    h1 Profile
+    p Welcome, #{user.displayName || user.username || 'User'}!
+    a(href="/logout") Logout
+
