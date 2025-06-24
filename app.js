@@ -1,105 +1,143 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-
-// ---------------------- saml begin -----------------
-var cors = require('cors');
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const SamlStrategy = require('passport-saml').Strategy;
+const bcrypt = require('bcrypt');
 require('dotenv').config();
-var fs = require('fs')
-var passport = require('passport');
-var session = require('express-session');
-var SamlStrategy = require('passport-saml').Strategy;
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
-passport.use(new SamlStrategy(
-  {
-    callbackUrl: process.env.SAML_CALLBACK_URL,
-    entryPoint: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/saml2`,
-    issuer: process.env.AZURE_AD_ENTERPRISE_APP_SAML_Identifier,
-    cert: fs.readFileSync(process.env.AZURE_AD_SAML_CERT_B64, 'utf-8'),
-    signatureAlgorithm: 'sha256'
-  },
-  (profile, done) => {
-    return done(null,
-      {
-        id: profile['nameID'],
-        email: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'],
-        displayName: profile['http://schemas.microsoft.com/identity/claims/displayname'],
-        firstName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'],
-        lastName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'],
-        assertionXml: profile.getAssertionXml(),
-      });
-  })
-);
-// ---------------------- saml end -----------------
+const app = express();
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var tasksRouter = require('./routes/tasks');
+app.use(express.urlencoded({ extended: true }));
 
-var app = express();
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
-// ---------------------- saml begin -----------------
-app.use(cors({
-  origin: [process.env.CORS_ALLOW_URL],
-  credentials: true
+// Session setup (adjust secret in production!)
+app.use(session({
+  secret: process.env.MY_SESSION_SECRET || 'defaultsecret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set to true if using HTTPS
 }));
 
-// without this cookie setting, session cookie won't be sent back when making axios call from another domain
-app.use(session({ resave: true, saveUninitialized: true, secret: process.env.MY_SESSION_SECRET, cookie: { sameSite: 'none', secure: true } }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get('/login',
-  (req, res, next) => {
-    console.log("login cookie:", req.cookies);
-    req.query.RelayState = req.query.returnTo;
-    passport.authenticate('saml', { successRedirect: req.query.returnTo || '/', failureRedirect: '/login', })(req, res, next);
+// --- Users for local login ---
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    // hashed password for 'password'
+    passwordHash: bcrypt.hashSync('password', 10),
   }
-);
-app.post('/login/callback',
-  passport.authenticate('saml', { failureRedirect: '/login', failureFlash: true }),
-  (req, res) => {
-    console.log("session id", req.sessionID);
-    res.redirect(req.body.RelayState || '/');
+];
+
+// --- Passport Local Strategy ---
+passport.use(new LocalStrategy((username, password, done) => {
+  const user = users.find(u => u.username === username);
+  if (!user) return done(null, false, { message: 'Incorrect username.' });
+  if (!bcrypt.compareSync(password, user.passwordHash)) return done(null, false, { message: 'Incorrect password.' });
+  return done(null, user);
+}));
+
+// --- Optional SAML Strategy Setup ---
+let samlEnabled = false;
+try {
+  const cert = process.env.AZURE_AD_SAML_CERT_B64?.replace(/\\n/g, '\n');
+  if (!cert || !process.env.SAML_CALLBACK_URL || !process.env.AZURE_AD_TENANT_ID || !process.env.AZURE_AD_ENTERPRISE_APP_SAML_Identifier) {
+    throw new Error('SAML env vars missing');
   }
-);
-// ---------------------- saml end -----------------
+  passport.use(new SamlStrategy({
+    callbackUrl: process.env.SAML_CALLBACK_URL,
+    entryPoint: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/saml2`,
+    issuer: process.env.AZURE_AD_ENTERPRISE_APP_SAML_Identifier,
+    cert: cert,
+    signatureAlgorithm: 'sha256'
+  }, (profile, done) => {
+    done(null, {
+      id: profile.nameID,
+      email: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'],
+      displayName: profile['http://schemas.microsoft.com/identity/claims/displayname'],
+      firstName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'],
+      lastName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'],
+    });
+  }));
+  samlEnabled = true;
+  console.log('SAML login ENABLED');
+} catch (e) {
+  console.warn('SAML login DISABLED:', e.message);
+}
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/tasks', tasksRouter);
+// --- Passport Serialize / Deserialize ---
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
+// --- Routes ---
+
+// Unified login page
+app.get('/login', (req, res) => {
+  res.send(`
+    <h1>Login</h1>
+    <ul>
+      ${samlEnabled ? '<li><a href="/login/saml">Login with SAML (Azure AD)</a></li>' : ''}
+      <li><a href="/login/local">Login with username/password</a></li>
+    </ul>
+  `);
 });
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+// Local login form
+app.get('/login/local', (req, res) => {
+  res.send(`
+    <h1>Local Login</h1>
+    <form method="POST" action="/login/local">
+      <input name="username" placeholder="Username" required /><br/>
+      <input name="password" type="password" placeholder="Password" required /><br/>
+      <button type="submit">Login</button>
+    </form>
+  `);
 });
 
-module.exports = app;
+// Local login handler
+app.post('/login/local', passport.authenticate('local', {
+  successRedirect: '/profile',
+  failureRedirect: '/login/local'
+}));
+
+// SAML login route and callback, if enabled
+if (samlEnabled) {
+  app.get('/login/saml', passport.authenticate('saml', {
+    failureRedirect: '/login',
+    failureFlash: true
+  }));
+
+  app.post('/login/callback',
+    passport.authenticate('saml', { failureRedirect: '/login' }),
+    (req, res) => res.redirect('/profile')
+  );
+} else {
+  app.get('/login/saml', (req, res) => res.status(503).send('SAML login not configured'));
+  app.post('/login/callback', (req, res) => res.status(503).send('SAML login not configured'));
+}
+
+// Protected profile route
+app.get('/profile', (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect('/login');
+  res.send(`
+    <h1>Profile</h1>
+    <p>Welcome, ${req.user.displayName || req.user.username || 'User'}!</p>
+    <p><a href="/logout">Logout</a></p>
+  `);
+});
+
+// Logout route
+app.get('/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/login');
+  });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
