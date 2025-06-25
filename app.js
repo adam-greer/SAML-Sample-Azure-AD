@@ -198,14 +198,32 @@ app.get('/profile', ensureAuthenticated, (req, res) => {
   res.render('profile', { user: profile });
 });
 
-app.get('/users', ensureAdmin, (req, res) => {
-  const allUsers = [...loadUsers(), ...users.map(u => ({
-    email: u.username,
-    displayName: u.username,
-    authType: 'local',
-    isAdmin: u.isAdmin
-  }))];
-  res.render('users', { users: allUsers });
+const { marked } = require('marked');
+
+app.get('/tutorial', ensureAuthenticated, (req, res) => {
+  console.log('Tutorial route hit!');
+  console.log('Current directory:', process.cwd());
+
+  try {
+    const tutorialMarkdown = fs.readFileSync('./saml-tutorial.md', 'utf8');
+    console.log('Markdown loaded, length:', tutorialMarkdown.length);
+
+    const tutorialHtml = marked(tutorialMarkdown);
+    console.log('HTML generated, length:', tutorialHtml.length);
+
+    res.render('tutorial', {
+      title: 'How SAML Works',
+      user: req.user,
+      tutorialHtml: tutorialHtml
+    });
+  } catch (error) {
+    console.error('Error loading tutorial:', error);
+    res.render('tutorial', {
+      title: 'How SAML Works',
+      user: req.user,
+      tutorialHtml: '<h1>Tutorial Error</h1><p>Could not load tutorial content.</p>'
+    });
+  }
 });
 
 app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
@@ -236,7 +254,6 @@ app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
     res.redirect('/users');
   }
 });
-const marked = require('marked');
 const stepsPath = path.join(__dirname, 'steps.md');
 app.get('/admin/env', ensureAdmin, (req, res) => {
   const envPath = path.join(__dirname, '.env');

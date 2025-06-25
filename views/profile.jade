@@ -29,6 +29,9 @@ block content
     
     .profile-actions
       a(href="/users", class="btn-primary") 👥 View All Users
+    .profile-action
+      a(href="/tutorial", class="btn-primary") 📚 How SAML Works - Learn More
+    .profile-actions
       if user && user.isAdmin
         a(href="/admin/env", class="btn-admin") ⚙️ SAML Configuration
       a(href="/logout", class="btn-logout") 🚪 Logout
