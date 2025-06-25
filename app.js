@@ -1,4 +1,4 @@
-// app.js (updated)
+// app.js
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -9,7 +9,7 @@ const SamlStrategy = require('passport-saml').Strategy;
 const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
 
-require('dotenv').config();
+dotenv.config();
 
 const app = express();
 
@@ -73,8 +73,13 @@ function initSamlStrategy() {
     try { passport.unuse('saml'); } catch {}
     samlStrategyInstance = null;
   }
+
+  // Convert literal \n in env var to actual newlines for the PEM cert
   const cert = process.env.AZURE_AD_SAML_CERT_B64?.replace(/\\n/g, '\n');
-  if (!cert || !process.env.SAML_CALLBACK_URL || !process.env.AZURE_AD_TENANT_ID || !process.env.AZURE_AD_ENTERPRISE_APP_SAML_Identifier) return;
+  if (!cert || !process.env.SAML_CALLBACK_URL || !process.env.AZURE_AD_TENANT_ID || !process.env.AZURE_AD_ENTERPRISE_APP_SAML_Identifier) {
+    console.warn('SAML config incomplete, skipping SAML strategy initialization');
+    return;
+  }
 
   samlStrategyInstance = new SamlStrategy({
     callbackUrl: process.env.SAML_CALLBACK_URL,
@@ -92,34 +97,26 @@ function initSamlStrategy() {
       title: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/title'],
     });
   });
+
   passport.use('saml', samlStrategyInstance);
 }
 initSamlStrategy();
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => {
-  // Check if it's a local user
+  // Check if local user
   if (user.username) {
     const localUser = users.find(u => u.username === user.username);
     if (localUser) {
       user.isAdmin = localUser.isAdmin || false;
     }
-  }
-
-  // Check if it's a SAML user
-  else if (user.email) {
-    const allUsers = loadUsers(); // Load users.json
+  } else if (user.email) {  // SAML user
+    const allUsers = loadUsers();
     const matched = allUsers.find(u => u.email === user.email);
-    if (matched) {
-      user.isAdmin = matched.isAdmin || false;
-    } else {
-      user.isAdmin = false;
-    }
+    user.isAdmin = matched ? matched.isAdmin : false;
   }
-
   return done(null, user);
 });
-
 
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) return next();
@@ -149,13 +146,13 @@ app.post('/login/callback', passport.authenticate('saml', { failureRedirect: '/l
 
   addOrUpdateUser(userObj);
 
-  // 🔁 Reload the full user with isAdmin from JSON
   const allUsers = loadUsers();
   const fullUser = allUsers.find(u => u.email === userObj.email);
 
   req.session.userProfile = fullUser || userObj;
   res.redirect('/profile');
 });
+
 app.get('/profile', ensureAuthenticated, (req, res) => {
   const profile = req.session.userProfile || req.user;
   res.render('profile', { user: profile });

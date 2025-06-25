@@ -6,16 +6,14 @@ block content
 
     form(method="POST", action="/admin/env/save")
       label(for="SAML_CALLBACK_URL") SAML Callback URL
-      input(type="text", name="SAML_CALLBACK_URL", id="SAML_CALLBACK_URL", value=envVars.SAML_CALLBACK_URL)
+      input(type="text", name="SAML_CALLBACK_URL", id="SAML_CALLBACK_URL", value=envVars.SAML_CALLBACK_URL, placeholder="Input Callback URL Here")
 
       label(for="AZURE_AD_TENANT_ID") Azure AD Tenant ID
-      input(type="text", name="AZURE_AD_TENANT_ID", id="AZURE_AD_TENANT_ID", value=envVars.AZURE_AD_TENANT_ID)
+      input(type="text", name="AZURE_AD_TENANT_ID", id="AZURE_AD_TENANT_ID", value=envVars.AZURE_AD_TENANT_ID, placeholder="Input Azure Tenant ID here")
 
       label(for="AZURE_AD_ENTERPRISE_APP_SAML_Identifier") Azure Identifier
-      input(type="text", name="AZURE_AD_ENTERPRISE_APP_SAML_Identifier", id="AZURE_AD_ENTERPRISE_APP_SAML_Identifier", value=envVars.AZURE_AD_ENTERPRISE_APP_SAML_Identifier)
-
+      input(type="text", name="AZURE_AD_ENTERPRISE_APP_SAML_Identifier", id="AZURE_AD_ENTERPRISE_APP_SAML_Identifier", value=envVars.AZURE_AD_ENTERPRISE_APP_SAML_Identifier, placeholder="Input Azure EntityID here")
       label(for="AZURE_AD_SAML_CERT_B64") Base64 Certificate
-      textarea(name="AZURE_AD_SAML_CERT_B64", id="AZURE_AD_SAML_CERT_B64", rows="6")= envVars.AZURE_AD_SAML_CERT_B64
-
+      textarea(name="AZURE_AD_SAML_CERT_B64", id="AZURE_AD_SAML_CERT_B64", rows=8, required, placeholder="Paste Azure's x509 Cert here",class="input-like")= envVars.AZURE_AD_SAML_CERT_B64
       button(type="submit") Save Changes and Reload Site
 
