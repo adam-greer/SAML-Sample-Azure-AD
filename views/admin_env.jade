@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  .form-container
+    h1 Edit .env File
+
+    form(method="POST", action="/admin/env/save")
+      each val, key in envVars
+        label(for=key) #{key}
+        input(type="text", name=key, id=key, value=val)
+      
+      button(type="submit") Save Changes
+

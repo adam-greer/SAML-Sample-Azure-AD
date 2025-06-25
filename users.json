@@ -5,6 +5,7 @@
     "lastName": "Greer",
     "title": "Data Security Architect",
     "displayName": "Greer, Adam",
-    "authType": "saml"
+    "authType": "saml",
+    "isAdmin": true
   }
 ]

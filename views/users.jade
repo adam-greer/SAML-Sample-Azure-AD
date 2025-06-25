@@ -1,9 +1,10 @@
 extends layout
 
 block content
-  .centered-box
+  .container
     h1 Users List
-    table(border="1", cellpadding="5", cellspacing="0")
+    a.button-link(href="/profile") Profile
+    table
       thead
         tr
           th Email
@@ -12,8 +13,9 @@ block content
           th Title
           th Display Name
           th Auth Type
+          th Admin
       tbody
-        each user in users
+        each user, i in users
           tr
             td #{user.email}
             td #{user.firstName || 'N/A'}
@@ -21,4 +23,10 @@ block content
             td #{user.title || 'N/A'}
             td #{user.displayName || 'N/A'}
             td #{user.authType || 'local'}
+            td
+              - var encodedEmail = encodeURIComponent(user.email)
+              form(method="POST", action='/users/' + encodedEmail + '/admin-toggle')
+                input(type="hidden", name="email", value=user.email)
+                input(type="checkbox", name="isAdmin", checked=user.isAdmin)
+                button(type="submit") Save
 

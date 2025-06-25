@@ -12,12 +12,10 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 
-//setup views and layout
+// Setup views and layout
 app.set('view engine', 'jade');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
-
-
 
 // Session setup (adjust secret in production!)
 app.use(session({
@@ -30,13 +28,13 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --- Users for local login ---
+// --- Users for local login (in-memory) ---
 const users = [
   {
     id: 1,
     username: 'admin',
-    // hashed password for 'password'
     passwordHash: bcrypt.hashSync('password', 10),
+    isAdmin: true,
   }
 ];
 
@@ -80,39 +78,24 @@ try {
 // --- Passport Serialize / Deserialize ---
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => {
-  // Add admin logic here — customize as needed
-  user.isAdmin = user.role === 'admin'; // or user.role === 'admin'
+  // Add admin logic here — check in JSON file or local users
+  if (user.username) {
+    // Local user
+    const localUser = users.find(u => u.username === user.username);
+    user.isAdmin = localUser ? localUser.isAdmin : false;
+  } else if (user.email) {
+    // SAML user, check JSON users
+    const allUsers = loadUsers();
+    const matched = allUsers.find(u => u.email === user.email);
+    user.isAdmin = matched ? matched.isAdmin : false;
+  } else {
+    user.isAdmin = false;
+  }
 
   done(null, user);
 });
 
-// --- Routes ---
-
-// Unified login page
-app.get('/login', (req, res) => {
-  res.render('login', { title: 'Login', samlEnabled });
-});
-
-
-// Local login form
-
-app.get('/login/local', (req, res) => {
-  res.render('login_local', { title: 'Local Login' });
-});
-
-//profile
-
-app.get('/profile', (req, res) => {
-  if (!req.isAuthenticated()) return res.redirect('/login');
-
-  // Use userProfile from session if you saved it there
-  const userProfile = req.session.userProfile || {};
-  console.log('Rengdering profile with user:', userProfile); 
-  res.render('profile', { title: 'Profile', user: userProfile });
-});
-
-// users setup
-
+// --- Load/save users JSON ---
 const usersFile = path.join(__dirname, 'users.json');
 
 function loadUsers() {
@@ -131,14 +114,40 @@ function addOrUpdateUser(user) {
   const users = loadUsers();
   const idx = users.findIndex(u => u.email === user.email);
   if (idx >= 0) {
-    // Update existing user info
+    // Preserve existing isAdmin if missing in update
+    if (typeof user.isAdmin === 'undefined') {
+      user.isAdmin = users[idx].isAdmin || false;
+    }
     users[idx] = { ...users[idx], ...user };
   } else {
-    // Add new user
+    user.isAdmin = user.isAdmin || false;
     users.push(user);
   }
   saveUsers(users);
 }
+
+// --- Middleware to check admin ---
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect('/login');
+}
+
+function ensureAdmin(req, res, next) {
+  if (req.isAuthenticated() && req.user.isAdmin) return next();
+  res.status(403).send('Unauthorized - Admins only');
+}
+
+// --- Routes ---
+
+// Unified login page
+app.get('/login', (req, res) => {
+  res.render('login', { title: 'Login', samlEnabled });
+});
+
+// Local login form
+app.get('/login/local', (req, res) => {
+  res.render('login_local', { title: 'Local Login' });
+});
 
 // Local login handler
 app.post('/login/local', passport.authenticate('local', {
@@ -153,60 +162,113 @@ if (samlEnabled) {
     failureFlash: true
   }));
 
+  app.post('/login/callback',
+    passport.authenticate('saml', { failureRedirect: '/login' }),
+    (req, res) => {
+      const profile = req.user;
+      console.log('SAML profile:', profile);
 
-app.post('/login/callback',
-  passport.authenticate('saml', { failureRedirect: '/login' }),
-  (req, res) => {
-    const profile = req.user;
-    console.log('SAML profile:', profile);
+      const email = profile.email || '';
+      const firstName = profile.firstName || '';
+      const lastName = profile.lastName || '';
+      const title = profile.title || '';
+      const displayName = profile.displayName || '';
 
-    const email = profile.email || '';
-    const firstName = profile.firstName || '';
-    const lastName = profile.lastName || '';
-    const title = profile.title || '';
-    const displayName = profile.displayName || '';
+      // Add authType and default isAdmin false if new user
+      const userProfile = { email, firstName, lastName, title, displayName, authType: 'saml', isAdmin: false };
 
-    // Add authType to distinguish
-    const userProfile = { email, firstName, lastName, title, displayName, authType: 'saml' };
+      addOrUpdateUser(userProfile);
 
-    // Save or update user in users.json
-    addOrUpdateUser(userProfile);
-
-    req.session.userProfile = userProfile;
-    res.redirect('/profile');
-  }
-);
-
-
+      req.session.userProfile = userProfile;
+      res.redirect('/profile');
+    });
 } else {
   app.get('/login/saml', (req, res) => res.status(503).send('SAML login not configured'));
   app.post('/login/callback', (req, res) => res.status(503).send('SAML login not configured'));
 }
 
-
-// KEEPING as backup until profile page works
-// Protected profile route
-/*app.get('/profile', (req, res) => {
-  if (!req.isAuthenticated()) return res.redirect('/login');
-  res.send(`
-    <h1>Profile</h1>
-    <p>Welcome, ${req.user.displayName || req.user.username || 'User'}!</p>
-    <p><a href="/logout">Logout</a></p>
-  `);
+// Profile route
+app.get('/profile', ensureAuthenticated, (req, res) => {
+  // Use userProfile from session or fallback to req.user
+  const userProfile = req.session.userProfile || req.user || {};
+  res.render('profile', { title: 'Profile', user: userProfile });
 });
-*/
 
-// users route
+// Users page — Admin only
+app.get('/users', ensureAdmin, (req, res) => {
+  const allUsers = loadUsers();
+  // Also add local users (transform local users to match JSON user shape)
+  const localUsers = users.map(u => ({
+    email: u.username, // local users use username as email for simplicity
+    firstName: '',
+    lastName: '',
+    title: '',
+    displayName: u.username,
+    authType: 'local',
+    isAdmin: u.isAdmin || false,
+  }));
 
-app.get('/users', (req, res) => {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    return res.status(403).send('Unauthorized');
+  const combinedUsers = [...allUsers, ...localUsers];
+  res.render('users', { users: combinedUsers, title: 'Users' });
+});
+
+// Admin toggle route for user
+app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
+  const email = req.params.email;
+  const isAdmin = req.body.isAdmin === 'on';
+
+  const allUsers = loadUsers();
+  const userIndex = allUsers.findIndex(u => u.email === email);
+
+  if (userIndex === -1) {
+    // Check local users
+    const localUserIndex = users.findIndex(u => u.username === email);
+    if (localUserIndex !== -1) {
+      users[localUserIndex].isAdmin = isAdmin;
+      return res.redirect('/users');
+    }
+    return res.status(404).send('User not found');
   }
 
-  const users = loadUsers();
-  res.render('users', { users });
+  allUsers[userIndex].isAdmin = isAdmin;
+  saveUsers(allUsers);
+
+  res.redirect('/users');
 });
 
+// admin route to edit env file
+
+const envFilePath = path.join(__dirname, '.env');
+
+app.get('/admin/env', ensureAdmin, (req, res) => {
+  // Read .env file as text
+  const envRaw = fs.readFileSync(envFilePath, 'utf8');
+
+  // Parse lines to { key: value }
+  const envVars = {};
+  envRaw.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...vals] = trimmed.split('=');
+      envVars[key] = vals.join('=');
+    }
+  });
+
+  res.render('admin_env', { title: '.env Editor', envVars });
+});
+
+
+// POST route to save changes to .env file
+app.post('/admin/env/save', ensureAdmin, (req, res) => {
+  // req.body contains key-value pairs from inputs
+  const updatedEnv = Object.entries(req.body)
+    .map(([key, val]) => `${key}=${val}`)
+    .join('\n');
+
+  fs.writeFileSync(envFilePath, updatedEnv, 'utf8');
+
+  res.redirect('/admin/env');
+});
 
 // Logout route
 app.get('/logout', (req, res) => {
