@@ -1,0 +1,31 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const router = express.Router();
+const dotenvPath = path.join(__dirname, '..', '.env');
+
+// Middleware: only allow authenticated users
+router.use((req, res, next) => {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(403).send('Unauthorized');
+  }
+  next();
+});
+
+// GET /admin/env — Show form
+router.get('/env', (req, res) => {
+  const env = fs.readFileSync(dotenvPath, 'utf8');
+  res.send(`<form method="POST">
+    <textarea name="env" rows="20" cols="80">${env}</textarea><br>
+    <button type="submit">Save</button>
+  </form>`);
+});
+
+// POST /admin/env — Save changes
+router.post('/env', express.urlencoded({ extended: true }), (req, res) => {
+  fs.writeFileSync(dotenvPath, req.body.env);
+  res.send('Saved. You may need to restart the server.');
+});
+
+module.exports = router;
+

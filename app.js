@@ -79,7 +79,12 @@ try {
 
 // --- Passport Serialize / Deserialize ---
 passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => {
+  // Add admin logic here — customize as needed
+  user.isAdmin = user.role === 'admin'; // or user.role === 'admin'
+
+  done(null, user);
+});
 
 // --- Routes ---
 
@@ -106,7 +111,34 @@ app.get('/profile', (req, res) => {
   res.render('profile', { title: 'Profile', user: userProfile });
 });
 
+// users setup
 
+const usersFile = path.join(__dirname, 'users.json');
+
+function loadUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(usersFile));
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+}
+
+function addOrUpdateUser(user) {
+  const users = loadUsers();
+  const idx = users.findIndex(u => u.email === user.email);
+  if (idx >= 0) {
+    // Update existing user info
+    users[idx] = { ...users[idx], ...user };
+  } else {
+    // Add new user
+    users.push(user);
+  }
+  saveUsers(users);
+}
 
 // Local login handler
 app.post('/login/local', passport.authenticate('local', {
@@ -121,27 +153,30 @@ if (samlEnabled) {
     failureFlash: true
   }));
 
-  app.post('/login/callback',
+
+app.post('/login/callback',
   passport.authenticate('saml', { failureRedirect: '/login' }),
   (req, res) => {
     const profile = req.user;
     console.log('SAML profile:', profile);
 
-    // Use direct keys from the simplified user object (as set in SamlStrategy)
     const email = profile.email || '';
     const firstName = profile.firstName || '';
     const lastName = profile.lastName || '';
-    const title = profile.title || ''; // only if you added title in SamlStrategy, otherwise empty
-    const displayName = profile.displayName || ''; 
+    const title = profile.title || '';
+    const displayName = profile.displayName || '';
 
-    const userProfile = { email, firstName, lastName, title, displayName };
+    // Add authType to distinguish
+    const userProfile = { email, firstName, lastName, title, displayName, authType: 'saml' };
 
-    console.log('Saving to session:', userProfile);
+    // Save or update user in users.json
+    addOrUpdateUser(userProfile);
+
     req.session.userProfile = userProfile;
-
     res.redirect('/profile');
   }
 );
+
 
 } else {
   app.get('/login/saml', (req, res) => res.status(503).send('SAML login not configured'));
@@ -161,6 +196,16 @@ if (samlEnabled) {
 });
 */
 
+// users route
+
+app.get('/users', (req, res) => {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(403).send('Unauthorized');
+  }
+
+  const users = loadUsers();
+  res.render('users', { users });
+});
 
 
 // Logout route

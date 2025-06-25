@@ -1,0 +1,24 @@
+extends layout
+
+block content
+  .centered-box
+    h1 Users List
+    table(border="1", cellpadding="5", cellspacing="0")
+      thead
+        tr
+          th Email
+          th First Name
+          th Last Name
+          th Title
+          th Display Name
+          th Auth Type
+      tbody
+        each user in users
+          tr
+            td #{user.email}
+            td #{user.firstName || 'N/A'}
+            td #{user.lastName || 'N/A'}
+            td #{user.title || 'N/A'}
+            td #{user.displayName || 'N/A'}
+            td #{user.authType || 'local'}
+

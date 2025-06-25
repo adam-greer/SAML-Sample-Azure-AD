@@ -1,7 +1,7 @@
 extends layout
 
 block content
-  .container
+  .centered-box
     h1 Profile
     p Hey, #{user.firstName || 'User'}!
 
@@ -17,10 +17,14 @@ block content
     p
       strong Title:
       |  #{user.title || 'N/A'}
-    
     p
       strong Display Name:
       |  #{user.displayName || 'N/A'}
 
-    a(href="/logout") Logout
+    // Links section inside the box
+    div.link-row
+      a(href="/users") View All Users
+      if user && user.isAdmin
+        a(href="/admin/env", target="_blank") Edit .env File
+      a(href="/logout") Logout
 

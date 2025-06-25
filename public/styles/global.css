@@ -19,7 +19,7 @@ body {
   box-shadow: 0 0 20px rgba(0,0,0,0.4);
   text-align: center;
   width: 100%;
-  max-width: 400px;
+  max-width: 900px;
 }
 
 /* Input fields and buttons */
@@ -76,5 +76,85 @@ a:hover {
   display: block;
   margin: 15px 0;
   font-size: 1.2rem;
+}
+
+/* Users table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  word-wrap: break-word;
+  margin-top: 1em;
+  color: #fff; /* ensure text is visible on dark background */
+}
+
+th, td {
+  padding: 8px 12px;
+  border: 1px solid #555;
+  overflow-wrap: break-word;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead {
+  background-color: #3b3b5a;
+  font-weight: 700;
+}
+
+.centered-box {
+  max-width: 900px;
+  width: 90%;
+  margin: 2em auto;
+  padding: 30px 40px;
+  background: #2e2e42;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  text-align: left;
+  color: #fff;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  word-wrap: break-word;
+  margin-top: 1em;
+  color: #fff;
+}
+
+th, td {
+  padding: 8px 12px;
+  border: 1px solid #555;
+  overflow-wrap: break-word;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead {
+  background-color: #3b3b5a;
+  font-weight: 700;
+}
+
+.link-row {
+  display: flex;
+  flex-direction: column;  /* stack vertically */
+  gap: 10px;
+  margin-top: 1em;
+}
+
+.link-row a {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+  display: inline-block;
+}
+
+.link-row a:hover {
+  background-color: #0056b3;
 }
 
