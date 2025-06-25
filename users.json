@@ -6,6 +6,6 @@
     "title": "Data Security Architect",
     "displayName": "Greer, Adam",
     "authType": "saml",
-    "isAdmin": true
+    "isAdmin": false
   }
 ]

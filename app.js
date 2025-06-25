@@ -6,29 +6,31 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const SamlStrategy = require('passport-saml').Strategy;
 const bcrypt = require('bcrypt');
-require('dotenv').config();
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 
-// Setup views and layout
+// Setup views and static files
 app.set('view engine', 'jade');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session setup (adjust secret in production!)
+// Session setup (set secure: true if using HTTPS in production)
 app.use(session({
   secret: process.env.MY_SESSION_SECRET || 'defaultsecret',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false } // set to true if using HTTPS
+  cookie: { secure: false }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --- Users for local login (in-memory) ---
+// In-memory local users
 const users = [
   {
     id: 1,
@@ -38,7 +40,7 @@ const users = [
   }
 ];
 
-// --- Passport Local Strategy ---
+// Passport Local Strategy
 passport.use(new LocalStrategy((username, password, done) => {
   const user = users.find(u => u.username === username);
   if (!user) return done(null, false, { message: 'Incorrect username.' });
@@ -46,7 +48,7 @@ passport.use(new LocalStrategy((username, password, done) => {
   return done(null, user);
 }));
 
-// --- Optional SAML Strategy Setup ---
+// SAML Setup
 let samlEnabled = false;
 try {
   const cert = process.env.AZURE_AD_SAML_CERT_B64?.replace(/\\n/g, '\n');
@@ -67,6 +69,7 @@ try {
       firstName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'],
       lastName: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'],
       title: profile['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/title'],
+      authType: 'saml',
     });
   }));
   samlEnabled = true;
@@ -75,27 +78,25 @@ try {
   console.warn('SAML login DISABLED:', e.message);
 }
 
-// --- Passport Serialize / Deserialize ---
+// Serialize & Deserialize user
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => {
-  // Add admin logic here — check in JSON file or local users
   if (user.username) {
-    // Local user
+    // local user
     const localUser = users.find(u => u.username === user.username);
     user.isAdmin = localUser ? localUser.isAdmin : false;
   } else if (user.email) {
-    // SAML user, check JSON users
+    // SAML user - check JSON file
     const allUsers = loadUsers();
     const matched = allUsers.find(u => u.email === user.email);
     user.isAdmin = matched ? matched.isAdmin : false;
   } else {
     user.isAdmin = false;
   }
-
   done(null, user);
 });
 
-// --- Load/save users JSON ---
+// Users JSON storage
 const usersFile = path.join(__dirname, 'users.json');
 
 function loadUsers() {
@@ -114,7 +115,6 @@ function addOrUpdateUser(user) {
   const users = loadUsers();
   const idx = users.findIndex(u => u.email === user.email);
   if (idx >= 0) {
-    // Preserve existing isAdmin if missing in update
     if (typeof user.isAdmin === 'undefined') {
       user.isAdmin = users[idx].isAdmin || false;
     }
@@ -126,7 +126,7 @@ function addOrUpdateUser(user) {
   saveUsers(users);
 }
 
-// --- Middleware to check admin ---
+// Middleware
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.redirect('/login');
@@ -137,9 +137,9 @@ function ensureAdmin(req, res, next) {
   res.status(403).send('Unauthorized - Admins only');
 }
 
-// --- Routes ---
+// Routes
 
-// Unified login page
+// Login page
 app.get('/login', (req, res) => {
   res.render('login', { title: 'Login', samlEnabled });
 });
@@ -149,13 +149,13 @@ app.get('/login/local', (req, res) => {
   res.render('login_local', { title: 'Local Login' });
 });
 
-// Local login handler
+// Local login POST
 app.post('/login/local', passport.authenticate('local', {
   successRedirect: '/profile',
   failureRedirect: '/login/local'
 }));
 
-// SAML login route and callback, if enabled
+// SAML login and callback
 if (samlEnabled) {
   app.get('/login/saml', passport.authenticate('saml', {
     failureRedirect: '/login',
@@ -166,16 +166,17 @@ if (samlEnabled) {
     passport.authenticate('saml', { failureRedirect: '/login' }),
     (req, res) => {
       const profile = req.user;
-      console.log('SAML profile:', profile);
 
-      const email = profile.email || '';
-      const firstName = profile.firstName || '';
-      const lastName = profile.lastName || '';
-      const title = profile.title || '';
-      const displayName = profile.displayName || '';
-
-      // Add authType and default isAdmin false if new user
-      const userProfile = { email, firstName, lastName, title, displayName, authType: 'saml', isAdmin: false };
+      // Add or update user in JSON store
+      const userProfile = {
+        email: profile.email || '',
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        title: profile.title || '',
+        displayName: profile.displayName || '',
+        authType: 'saml',
+        isAdmin: false // default false for SAML users
+      };
 
       addOrUpdateUser(userProfile);
 
@@ -183,23 +184,22 @@ if (samlEnabled) {
       res.redirect('/profile');
     });
 } else {
+  // If SAML disabled
   app.get('/login/saml', (req, res) => res.status(503).send('SAML login not configured'));
   app.post('/login/callback', (req, res) => res.status(503).send('SAML login not configured'));
 }
 
-// Profile route
+// Profile page
 app.get('/profile', ensureAuthenticated, (req, res) => {
-  // Use userProfile from session or fallback to req.user
   const userProfile = req.session.userProfile || req.user || {};
   res.render('profile', { title: 'Profile', user: userProfile });
 });
 
-// Users page — Admin only
+// Users list (admin only)
 app.get('/users', ensureAdmin, (req, res) => {
   const allUsers = loadUsers();
-  // Also add local users (transform local users to match JSON user shape)
   const localUsers = users.map(u => ({
-    email: u.username, // local users use username as email for simplicity
+    email: u.username,
     firstName: '',
     lastName: '',
     title: '',
@@ -212,7 +212,7 @@ app.get('/users', ensureAdmin, (req, res) => {
   res.render('users', { users: combinedUsers, title: 'Users' });
 });
 
-// Admin toggle route for user
+// Toggle admin flag for user (admin only)
 app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
   const email = req.params.email;
   const isAdmin = req.body.isAdmin === 'on';
@@ -236,43 +236,44 @@ app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
   res.redirect('/users');
 });
 
-// admin route to edit env file
-
-const envFilePath = path.join(__dirname, '.env');
-
+// Admin: GET edit .env page
 app.get('/admin/env', ensureAdmin, (req, res) => {
-  // Read .env file as text
-  const envRaw = fs.readFileSync(envFilePath, 'utf8');
+  const envFilePath = path.join(__dirname, '.env');
+  const envConfig = dotenv.parse(fs.readFileSync(envFilePath));
 
-  // Parse lines to { key: value }
-  const envVars = {};
-  envRaw.split('\n').forEach(line => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#')) {
-      const [key, ...vals] = trimmed.split('=');
-      envVars[key] = vals.join('=');
-    }
-  });
+  const filteredEnv = {
+    SAML_CALLBACK_URL: envConfig.SAML_CALLBACK_URL || '',
+    AZURE_AD_TENANT_ID: envConfig.AZURE_AD_TENANT_ID || '',
+    AZURE_AD_ENTERPRISE_APP_SAML_Identifier: envConfig.AZURE_AD_ENTERPRISE_APP_SAML_Identifier || '',
+    AZURE_AD_SAML_CERT_B64: envConfig.AZURE_AD_SAML_CERT_B64 || ''
+  };
 
-  res.render('admin_env', { title: '.env Editor', envVars });
+  res.render('admin_env', { envVars: filteredEnv, title: 'Edit SAML Configuration' });
 });
 
-
-// POST route to save changes to .env file
+// Admin: POST save .env changes
 app.post('/admin/env/save', ensureAdmin, (req, res) => {
-  // req.body contains key-value pairs from inputs
-  const updatedEnv = Object.entries(req.body)
-    .map(([key, val]) => `${key}=${val}`)
-    .join('\n');
+  try {
+    const envFileContent = Object.entries(req.body)
+      .map(([key, val]) => `${key}=${val}`)
+      .join('\n');
 
-  fs.writeFileSync(envFilePath, updatedEnv, 'utf8');
+    const envFilePath = path.join(__dirname, '.env');
 
-  res.redirect('/admin/env');
+    fs.writeFileSync(envFilePath, envFileContent, 'utf8');
+    dotenv.config({ path: envFilePath, override: true });
+
+    res.redirect('/profile');
+  } catch (err) {
+    console.error('Error saving .env file:', err);
+    res.status(500).send('Failed to save .env file');
+  }
 });
 
 // Logout route
-app.get('/logout', (req, res) => {
-  req.logout(() => {
+app.get('/logout', (req, res, next) => {
+  req.logout(err => {
+    if (err) { return next(err); }
     res.redirect('/login');
   });
 });
