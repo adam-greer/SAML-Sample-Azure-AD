@@ -61,6 +61,41 @@ function addOrUpdateUser(user) {
   saveUsers(users);
 }
 
+// Environment reload function
+function reloadEnvironment() {
+  const envPath = path.resolve('.env');
+  if (fs.existsSync(envPath)) {
+    console.log('Reloading environment variables...');
+    
+    // Clear the current environment variables that we care about
+    const envVarsToReload = [
+      'SAML_CALLBACK_URL',
+      'AZURE_AD_TENANT_ID', 
+      'AZURE_AD_ENTERPRISE_APP_SAML_Identifier',
+      'AZURE_AD_SAML_CERT_B64'
+    ];
+    
+    // Read and parse the .env file
+    const envConfig = fs.readFileSync(envPath, 'utf8');
+    const envLines = envConfig.split('\n');
+    
+    envLines.forEach(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        const [key, ...valueParts] = trimmedLine.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('='); // Handle values with = in them
+          process.env[key.trim()] = value.trim();
+        }
+      }
+    });
+    
+    console.log('Environment variables reloaded successfully');
+  } else {
+    console.warn('.env file not found');
+  }
+}
+
 passport.use(new LocalStrategy((username, password, done) => {
   const user = users.find(u => u.username === username);
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) return done(null, false);
@@ -99,6 +134,7 @@ function initSamlStrategy() {
   });
 
   passport.use('saml', samlStrategyInstance);
+  console.log('SAML strategy initialized successfully');
 }
 initSamlStrategy();
 
@@ -126,6 +162,10 @@ function ensureAdmin(req, res, next) {
   if (req.isAuthenticated() && req.user.isAdmin) return next();
   res.status(403).send('Admins only');
 }
+app.get('/', (req, res) => {
+  res.redirect('/login');
+});
+
 
 app.get('/login', (req, res) => res.render('login', { samlEnabled: !!samlStrategyInstance }));
 app.get('/login/local', (req, res) => res.render('login_local'));
@@ -223,12 +263,23 @@ app.get('/admin/env', ensureAdmin, (req, res) => {
 });
 
 app.post('/admin/env/save', ensureAdmin, (req, res) => {
-  const entries = Object.entries(req.body).map(([k, v]) => `${k}=${v}`).join('\n');
-  const envPath = path.join(__dirname, '.env');
-  fs.writeFileSync(envPath, entries);
-  dotenv.config({ path: envPath, override: true });
-  initSamlStrategy();
-  res.redirect('/profile');
+  try {
+    const entries = Object.entries(req.body).map(([k, v]) => `${k}=${v}`).join('\n');
+    const envPath = path.join(__dirname, '.env');
+    fs.writeFileSync(envPath, entries);
+    
+    // Reload environment variables from the updated .env file
+    reloadEnvironment();
+    
+    // Reinitialize SAML strategy with new config
+    initSamlStrategy();
+    
+    console.log('SAML configuration updated and reloaded successfully');
+    res.redirect('/profile');
+  } catch (error) {
+    console.error('Error saving SAML configuration:', error);
+    res.status(500).send('Error saving configuration');
+  }
 });
 
 app.get('/logout', (req, res) => {
@@ -237,4 +288,3 @@ app.get('/logout', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-

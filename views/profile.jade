@@ -1,30 +1,34 @@
 extends layout
-
 block content
-  .centered-box
+  .profile-container
     h1 Profile
-    p Hey, #{user.firstName || 'User'}!
-
-    p
-      strong Email:
-      |  #{user.email || 'N/A'}
-    p
-      strong First Name:
-      |  #{user.firstName || 'N/A'}
-    p
-      strong Last Name:
-      |  #{user.lastName || 'N/A'}
-    p
-      strong Title:
-      |  #{user.title || 'N/A'}
-    p
-      strong Display Name:
-      |  #{user.displayName || 'N/A'}
-
-    // Links section inside the box
-    div.link-row
-      a(href="/users") View All Users
+    
+    .profile-greeting
+      | Hey, #{user.firstName || 'User'}! Welcome back.
+    
+    .profile-info
+      .profile-field
+        .profile-field-label Email Address
+        .profile-field-value #{user.email || 'Not provided'}
+      
+      .profile-field
+        .profile-field-label First Name
+        .profile-field-value #{user.firstName || 'Not provided'}
+      
+      .profile-field
+        .profile-field-label Last Name
+        .profile-field-value #{user.lastName || 'Not provided'}
+      
+      .profile-field
+        .profile-field-label Job Title
+        .profile-field-value #{user.title || 'Not provided'}
+      
+      .profile-field
+        .profile-field-label Display Name
+        .profile-field-value #{user.displayName || 'Not provided'}
+    
+    .profile-actions
+      a(href="/users", class="btn-primary") 👥 View All Users
       if user && user.isAdmin
-        a(href="/admin/env", target="_blank") Edit SAML Configuration
-      a(href="/logout") Logout
-
+        a(href="/admin/env", class="btn-admin") ⚙️ SAML Configuration
+      a(href="/logout", class="btn-logout") 🚪 Logout

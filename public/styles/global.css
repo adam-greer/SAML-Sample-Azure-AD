@@ -11,15 +11,168 @@ body {
   min-height: 100vh;
 }
 
-/* Container for centered content */
-.container {
-  background: #2e2e42;
-  padding: 30px 40px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.4);
-  text-align: center;
+/* ==================== Profile Page Styling ==================== */
+
+/* Profile container - clean card design */
+.profile-container {
+  background: linear-gradient(135deg, #2e2e42 0%, #3a3a5a 100%);
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  text-align: left;
   width: 100%;
-  max-width: 1400px;  /* increased to accommodate side-by-side layout */
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.profile-container h1 {
+  color: #00bfff;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-align: center;
+  border-bottom: 2px solid #00bfff;
+  padding-bottom: 15px;
+}
+
+/* Profile greeting */
+.profile-greeting {
+  font-size: 1.3rem;
+  color: #e0e0e0;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 300;
+}
+
+/* Profile info grid */
+.profile-info {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.profile-field {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 18px 22px;
+  border-radius: 10px;
+  border-left: 4px solid #00bfff;
+  transition: all 0.3s ease;
+}
+
+.profile-field:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(5px);
+}
+
+.profile-field-label {
+  font-size: 0.9rem;
+  color: #00bfff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.profile-field-value {
+  font-size: 1.1rem;
+  color: #f0f0f0;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* Profile actions */
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.profile-actions a {
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Primary action button */
+.profile-actions .btn-primary {
+  background: linear-gradient(135deg, #00bfff 0%, #0099cc 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3);
+}
+
+.profile-actions .btn-primary:hover {
+  background: linear-gradient(135deg, #0099cc 0%, #007aa3 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 191, 255, 0.4);
+}
+
+/* Secondary action button */
+.profile-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Admin action button */
+.profile-actions .btn-admin {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.profile-actions .btn-admin:hover {
+  background: linear-gradient(135deg, #ee5a24 0%, #d63031 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+/* Logout button */
+.profile-actions .btn-logout {
+  background: rgba(108, 117, 125, 0.8);
+  color: white;
+  border: 1px solid rgba(108, 117, 125, 0.5);
+}
+
+.profile-actions .btn-logout:hover {
+  background: rgba(90, 98, 104, 0.9);
+  transform: translateY(-2px);
+}
+
+/* Responsive design for profile */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 30px 25px;
+  }
+  
+  .profile-actions {
+    flex-direction: column;
+  }
+  
+  .profile-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Remove old centered-box styles when used for profile */
+.profile-container.centered-box {
+  /* Override any conflicting styles */
+  text-align: left;
 }
 
 /* Header for edit pages */
@@ -141,23 +294,52 @@ a:hover {
   margin-bottom: 10px;
 }
 
-.form-container button {
+/* Button container for side-by-side buttons */
+.form-buttons {
+  display: flex;
+  gap: 15px;
   margin-top: 25px;
   align-self: flex-start;
+}
+
+.form-container button {
   padding: 12px 30px;
-  background-color: #00bfff;
   border: none;
-  color: white;
   border-radius: 6px;
   font-weight: 700;
   font-size: 1.1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
   width: auto;
+  margin: 0;
 }
 
-.form-container button:hover {
+/* Primary button (Save) */
+.form-container button[type="submit"],
+.form-container .btn-primary {
+  background-color: #00bfff;
+  color: white;
+}
+
+.form-container button[type="submit"]:hover,
+.form-container .btn-primary:hover {
   background-color: #0099cc;
+}
+
+/* Cancel button */
+.form-container .btn-cancel {
+  background-color: #6c757d;
+  color: white;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-container .btn-cancel:hover {
+  background-color: #5a6268;
+  text-decoration: none;
+  color: white;
 }
 
 /* Setup instructions wrapper */
