@@ -19,7 +19,24 @@ body {
   box-shadow: 0 0 20px rgba(0,0,0,0.4);
   text-align: center;
   width: 100%;
-  max-width: 900px;  /* widened to fit the table nicely */
+  max-width: 1400px;  /* increased to accommodate side-by-side layout */
+}
+
+/* Header for edit pages */
+.edit-header {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.2rem;
+  color: #00bfff;
+  font-weight: 700;
+}
+
+/* Main wrapper for admin env editing - side by side layout */
+.admin-env-wrapper {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 /* Input fields and buttons */
@@ -78,18 +95,19 @@ a:hover {
   font-size: 1.2rem;
 }
 
-/* New styles for env edit form */
+/* Enhanced form container for side-by-side layout */
 .form-container {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* aligns content to left */
-  max-width: 600px;
-  width: 90%;
-  margin: 20px auto;
-  padding: 20px 30px;
-  background-color: #2e2e42;
+  align-items: flex-start;
+  flex: 1;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 25px;
+  background-color: #3a3a5a;
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
   color: #fff;
 }
 
@@ -98,31 +116,34 @@ a:hover {
   margin-bottom: 20px;
   text-align: left;
   font-weight: 700;
-  font-size: 2rem;
+  font-size: 1.8rem;
   color: #00bfff;
 }
 
 .form-container label {
-  margin-top: 10px;
+  margin-top: 15px;
+  margin-bottom: 5px;
   font-weight: 600;
   width: 100%;
   display: block;
+  color: #f0f0f0;
 }
 
 .form-container input[type="text"] {
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 6px;
   border: 1px solid #555;
   background-color: #44475a;
   color: #f8f8f2;
   font-size: 1rem;
   box-sizing: border-box;
+  margin-bottom: 10px;
 }
 
 .form-container button {
   margin-top: 25px;
-  align-self: flex-start; /* left align the button */
+  align-self: flex-start;
   padding: 12px 30px;
   background-color: #00bfff;
   border: none;
@@ -132,17 +153,133 @@ a:hover {
   font-size: 1.1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  width: auto;
 }
 
 .form-container button:hover {
   background-color: #0099cc;
 }
 
+/* Setup instructions wrapper */
+.help-steps-wrapper {
+  flex: 1;
+  max-width: 600px;
+  margin-left: 20px;
+}
+
+.help-steps {
+  background-color: #3a3a5a;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  color: #f0f0f0;
+  line-height: 1.6;
+  text-align: left;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Styling for markdown content in help steps */
+.help-steps h1 {
+  color: #00bfff;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  margin-top: 0;
+  border-bottom: 2px solid #00bfff;
+  padding-bottom: 10px;
+}
+
+.help-steps h2 {
+  color: #66d9ff;
+  font-size: 1.4rem;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  border-left: 4px solid #00bfff;
+  padding-left: 15px;
+}
+
+.help-steps h3 {
+  color: #99e6ff;
+  font-size: 1.2rem;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.help-steps p {
+  margin-bottom: 15px;
+  color: #e0e0e0;
+}
+
+.help-steps ul, .help-steps ol {
+  margin-bottom: 15px;
+  padding-left: 25px;
+}
+
+.help-steps li {
+  margin-bottom: 8px;
+  color: #e0e0e0;
+}
+
+.help-steps code {
+  background-color: #44475a;
+  color: #ff79c6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.help-steps pre {
+  background-color: #44475a;
+  color: #f8f8f2;
+  padding: 15px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 15px 0;
+  font-family: 'Courier New', monospace;
+  border-left: 4px solid #00bfff;
+}
+
+.help-steps blockquote {
+  border-left: 4px solid #ffb86c;
+  padding-left: 15px;
+  margin: 15px 0;
+  color: #ffb86c;
+  font-style: italic;
+}
+
+.help-steps a {
+  color: #8be9fd;
+  text-decoration: underline;
+}
+
+.help-steps a:hover {
+  color: #66d9ff;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1024px) {
+  .admin-env-wrapper {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .help-steps-wrapper {
+    max-width: none;
+    margin-left: 0;
+  }
+  
+  .container {
+    max-width: 95%;
+    padding: 20px;
+  }
+}
+
 .link-row {
   display: flex;
   gap: 16px;
   margin-top: 1.5em;
-  justify-content: center; /* center horizontally */
+  justify-content: center;
 }
 
 .link-row a {
@@ -164,7 +301,7 @@ a:hover {
 .container table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 8px; /* space between rows */
+  border-spacing: 0 8px;
   margin-top: 1rem;
 }
 
@@ -199,7 +336,6 @@ a:hover {
   border-radius: 6px;
 }
 
-/* Buttons inside the table */
 .container table button {
   background-color: #00bfff;
   border: none;
@@ -216,16 +352,16 @@ a:hover {
   background-color: #0099cc;
 }
 
-/* Checkbox style for isAdmin */
 .container table input[type="checkbox"] {
   transform: scale(1.2);
   margin: 0 5px 0 0;
   cursor: pointer;
   vertical-align: middle;
 }
+
 textarea.input-like {
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 6px;
   border: 1px solid #555;
   background-color: #44475a;
@@ -233,6 +369,6 @@ textarea.input-like {
   font-size: 1rem;
   box-sizing: border-box;
   resize: vertical;
-  font-family: monospace;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 10px;
 }
-

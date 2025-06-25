@@ -2,9 +2,14 @@ extends layout
 
 block content
   .container
-    h1 Local Login
+    h1.edit-header Local Login
+
     form(method="POST", action="/login/local")
-      input(type="text", name="username", placeholder="Username", required)
-      input(type="password", name="password", placeholder="Password", required)
+      label(for="username") Username
+      input(type="text", name="username", id="username", placeholder="Enter username", required)
+
+      label(for="password") Password
+      input(type="password", name="password", id="password", placeholder="Enter password", required)
+
       button(type="submit") Login
 

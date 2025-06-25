@@ -196,17 +196,29 @@ app.post('/users/:email/admin-toggle', ensureAdmin, (req, res) => {
     res.redirect('/users');
   }
 });
-
+const marked = require('marked');
+const stepsPath = path.join(__dirname, 'steps.md');
 app.get('/admin/env', ensureAdmin, (req, res) => {
   const envPath = path.join(__dirname, '.env');
   const parsed = dotenv.parse(fs.readFileSync(envPath));
+
+  let stepsMarkdown = '';
+  try {
+    stepsMarkdown = fs.readFileSync(stepsPath, 'utf8');
+  } catch (e) {
+    stepsMarkdown = '### Setup instructions not found.';
+  }
+
+  const stepsHtml = marked.parse(stepsMarkdown);
+
   res.render('admin_env', {
     envVars: {
       SAML_CALLBACK_URL: parsed.SAML_CALLBACK_URL || '',
       AZURE_AD_TENANT_ID: parsed.AZURE_AD_TENANT_ID || '',
       AZURE_AD_ENTERPRISE_APP_SAML_Identifier: parsed.AZURE_AD_ENTERPRISE_APP_SAML_Identifier || '',
       AZURE_AD_SAML_CERT_B64: parsed.AZURE_AD_SAML_CERT_B64 || ''
-    }
+    },
+    stepsHtml
   });
 });
 

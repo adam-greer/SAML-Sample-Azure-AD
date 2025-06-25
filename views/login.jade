@@ -2,8 +2,10 @@ extends layout
 
 block content
   .container
-    h1 Login
+    h1.edit-header Login
     if samlEnabled
-      a(href="/login/saml") 🔐 Login with SAML (Azure AD)
-    a(href="/login/local") 👤 Login with Username/Password
+      .login-option
+        a.button-link(href="/login/saml") 🔐 Login with SAML (Azure AD)
+    .login-option
+      a.button-link(href="/login/local") 👤 Login with Username/Password
 
